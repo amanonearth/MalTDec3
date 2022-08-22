@@ -90,12 +90,18 @@ def tcp_sniffer():
 
 
 
-df = df.append(pd.DataFrame(packetRow,
-           columns=[ 'src_IP', 'dest_IP', 'packet_len', 'data']),
-           ignore_index = True)
-
-# display(df)
-
-# ftp_sniffer()
-# ssh_sniffer()
-# tcp_sniffer()
+def packetSniff():
+    try:
+        ftp_sniffer()
+        ssh_sniffer()
+        tcp_sniffer()
+        df = df.append(pd.DataFrame(packetRow,
+                   columns=[ 'src_IP', 'dest_IP', 'packet_len', 'data']),
+                   ignore_index = True)
+        # display(df)
+    except KeyboardInterrupt as e:
+        df = df.append(pd.DataFrame(packetRow,
+                   columns=[ 'src_IP', 'dest_IP', 'packet_len', 'data']),
+                   ignore_index = True)
+        
+packetSniff()
