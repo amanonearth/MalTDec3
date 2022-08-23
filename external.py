@@ -2,6 +2,7 @@ from scapy.all import *
 import pandas as pd
 
 packetRow = []
+new_rows_count = 0
 # ftp_dest_IP = ''
 # ftp_src_IP = ''
 # ftp_packet_len = ''
@@ -27,6 +28,8 @@ def ftp(packet):
     raw = packet.sprintf('%Raw.load%')
     raw = raw + "FTP"
     packetRow.append([ftp_src_IP, ftp_dest_IP, ftp_packet_len, raw])
+    global new_rows_count
+    new_rows_count += 1
 
 
 def ftp_sniffer():
@@ -52,6 +55,8 @@ def ssh(packet):
     raw = packet.sprintf('%Raw.load%')
     raw = raw + "SSH"
     packetRow.append([ssh_src_IP, ssh_dest_IP, ssh_packet_len, raw])
+    global new_rows_count
+    new_rows_count += 1
     # return ssh_dest_IP, ssh_src_IP, ssh_packet_len, raw
 
 def ssh_sniffer():
@@ -79,6 +84,8 @@ def tcp(packet):
     if (src_port != 21):
         if (src_port != 22):
             packetRow.append([tcp_src_IP, tcp_dest_IP, tcp_packet_len, raw])
+            global new_rows_count
+            new_rows_count += 1
 
 def tcp_sniffer():
     conf.iface = "lo"
