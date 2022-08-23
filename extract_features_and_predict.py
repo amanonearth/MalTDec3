@@ -1,4 +1,3 @@
-import platform
 import pandas as pd
 import external as ex
 import pickle as pk
@@ -9,145 +8,99 @@ FEATURES = ['protocol_type', 'service', 'src_IP', 'dest_IP', 'failed_login', 'ro
 
 data_dir = ''
 final_df = []
+next_row_index = 0
 
-def all_read_and_merge():
-	global final_df
+def read():
+	global next_row_index
+	dataframe = []
+	row = ' '
+	while ex.new_rows_count > 0:
+		row = ex.packetRow[next_row_index]
+		protocol_type = service = ''
+		failed_login = root_shell = su_attempted = file_creation = 0
+		file_access = outbound_conn = log_accessed = 0
+		if '' in row[3]:
+			protocol_type = 'TCP'
+		elif '' in row[3]:
+			protocol_type = 'SSH'
+		elif '' in row[3]:
+			protocol_type = 'FTP'
+		if '' in row[3]:
+			service = 'TCP'
+		elif '' in row[3]:
+			service = 'SSHv2'
+		elif '' in row[3]:
+			service = 'VSFTPD'
 
-	def ftp_read():
-		if platform.system() == 'Linux':
-			data_dir = '/var/log/vsftpd.log' # directory of the file
-		elif platform.system() == 'Windows':
-			data_dir = '/var/log/vsftpd.log' # directory of the file
+		if protocol_type == 'TCP':	
+			if 'Login incorrect' in row[3]:
+				failed_login = 1
+			if 'USER root' in row[3]:
+				root_shell = 1
+			if 'USER root' in row[3]:
+				su_attempted = 1
+			if 'MKD' in row[3]:
+				file_creation = 1
+			if 'LIST' in row[3] or 'CWD' in row[3]:
+				file_access = 1
+			if '/var/log' in row[3]:
+				log_accessed = 1			
+		elif protocol_type == 'SSH':	
+			if 'Login incorrect' in row[3]:
+				failed_login = 1
+			if 'USER root' in row[3]:
+				root_shell = 1
+			if 'USER root' in row[3]:
+				su_attempted = 1
+			if 'MKD' in row[3]:
+				file_creation = 1
+			if 'LIST' in row[3] or 'CWD' in row[3]:
+				file_access = 1
+			if '/var/log' in row[3]:
+				log_accessed = 1			
+		elif protocol_type == 'FTP':
+			if 'Login incorrect' in row[3]:
+				failed_login = 1
+			if 'USER root' in row[3]:
+				root_shell = 1
+			if 'USER root' in row[3]:
+				su_attempted = 1
+			if 'MKD' in row[3]:
+				file_creation = 1
+			if 'LIST' in row[3] or 'CWD' in row[3]:
+				file_access = 1
+			if '/var/log' in row[3]:
+				log_accessed = 1
 
-		dataframe = []
-		row = ' '
-		with open(data_dir, 'r') as f: 
-			while row != '':
-				row = f.readline()
-				with open('vsftpd.log.bak', 'a') as fb:
-					fb.write(row)
-				failed_login = root_shell = su_attempted = file_creation = 0
-				file_access = outbound_conn = log_accessed = 0
-				if 'Login incorrect' in row:
-					failed_login = 1
-				if 'USER root' in row:
-					root_shell = 1
-				if 'USER root' in row:
-					su_attempted = 1
-				if 'MKD' in row:
-					file_creation = 1
-				if 'LIST' in row or 'CWD' in row:
-					file_access = 1
-				if '/var/log' in row:
-					log_accessed = 1			
-				dataframe.append(['TCP', 'FTP', ex.ftp_src_IP, ex.ftp_dest_IP,
-					failed_login, root_shell, su_attempted, file_creation, 
-					file_access, outbound_conn, log_accessed, ex.ftp_packet_len])
-		with open(data_dir, 'w') as f:
-			f.write('')
-		return pd.DataFrame(dataframe, columns = FEATURES)
+		dataframe.append([
+			protocol_type, service, row[0], row[1],
+			failed_login, root_shell, su_attempted, file_creation, 
+			file_access, outbound_conn, log_accessed, row[2]
+		])
 
-	def merge(df1, df2):
-		return pd.concat([df1, df2], axis = 1)
+		next_row_index += 1
+		ex.new_rows_count += 1
 
-	def ftp_read_and_merge(data):
-		if type(data) != pd.DataFrame:
-			return ftp_read()
-		return merge(data, ftp_read())
+	return pd.DataFrame(dataframe, columns = FEATURES)
 
-	def ssh_read():
-		if platform.system() == 'Linux':
-			data_dir = '/var/log/auth.log' # directory of the file
-		elif platform.system() == 'Windows':
-			data_dir = '/var/log/auth.log' # directory of the file
+def merge(df1, df2):
+	return pd.concat([df1, df2], axis = 1)
 
-		dataframe = []
-		row = ' '
-		with open(data_dir, 'r') as f: 
-			while row != '':
-				row = f.readline()
-				with open('auth.log.bak', 'a') as fb:
-					fb.write(row)
-				failed_login = root_shell = su_attempted = file_creation = 0
-				file_access = outbound_conn = log_accessed = 0
-				if 'Login incorrect' in row:
-					failed_login = 1
-				if 'USER root' in row:
-					root_shell = 1
-				if 'USER root' in row:
-					su_attempted = 1
-				if 'MKD' in row:
-					file_creation = 1
-				if 'LIST' in row or 'CWD' in row:
-					file_access = 1
-				if '/var/log' in row:
-					log_accessed = 1			
-				dataframe.append(['TCP', 'FTP', ex.ssh_src_IP, ex.ssh_dest_IP,
-					failed_login, root_shell, su_attempted, file_creation, 
-					file_access, outbound_conn, log_accessed, ex.ssh_packet_len])
-		with open(data_dir, 'w') as f:
-			f.write('')
-		return pd.DataFrame(dataframe, columns = FEATURES)
+def read_and_merge(data):
+	if type(data) != pd.DataFrame:
+		return read()
+	return merge(data, read())
 
-	def ssh_read_and_merge(data):
-		if type(data) != pd.DataFrame:
-			return ftp_read()
-		return merge(data, ssh_read())
-
-	def tcp_read():
-		if platform.system() == 'Linux':
-			data_dir = 'test.txt' # directory of the file
-		elif platform.system() == 'Windows':
-			data_dir = 'test.txt' # directory of the file
-
-		dataframe = []
-		row = ' '
-		with open(data_dir, 'r') as f: 
-			while row != '':
-				row = f.readline()
-				with open('vsftpd.log.bak', 'a') as fb:
-					fb.write(row)
-				failed_login = root_shell = su_attempted = file_creation = 0
-				file_access = outbound_conn = log_accessed = 0
-				if 'Login incorrect' in row:
-					failed_login = 1
-				if 'USER root' in row:
-					root_shell = 1
-				if 'USER root' in row:
-					su_attempted = 1
-				if 'MKD' in row:
-					file_creation = 1
-				if 'LIST' in row or 'CWD' in row:
-					file_access = 1
-				if '/var/log' in row:
-					log_accessed = 1			
-				dataframe.append(['TCP', 'FTP', ex.tcp_src_IP, ex.tcp_dest_IP,
-					failed_login, root_shell, su_attempted, file_creation, 
-					file_access, outbound_conn, log_accessed, ex.tcp_packet_len])
-		with open(data_dir, 'w') as f:
-			f.write('')
-		return pd.DataFrame(dataframe, columns = FEATURES)
-
-	def tcp_read_and_merge(data):
-		if type(data) != pd.DataFrame:
-			return ftp_read()
-		return merge(data, tcp_read())
-
-	final_df = ftp_read_and_merge(final_df) 
-	final_df = tcp_read_and_merge(final_df)
-	final_df = ssh_read_and_merge(final_df)
+# final_df = read_and_merge(final_df)
 
 def get_mal_IPs():
 	global final_df
 	
-	model_df = final_df.drop(columns = ['src_IP', 'dest_IP'])
+	model_df = pd.get_dummies(final_df.drop(columns = ['src_IP', 'dest_IP']))
 	
 	encoder = load_model('trained_encoder.h5')
 	reduced_df = encoder.predict(model_df)
 
-    # pca = pk.load(open('trained_PCA.pickle', 'rb'))
-    # reduced_df = pca.transform(model_df)
-	 
 	model = pk.load(open("OneClassSVM_auto.pickle", 'rb'))
 	pred = pd.Series(model.predict(reduced_df), name = 'Predictions')
 	Mal_src_IP = final_df[pred == -1]['src_IP']
