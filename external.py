@@ -32,8 +32,8 @@ def ftp(packet):
     new_rows_count += 1
 
 
-def ftp_sniffer():
-    conf.iface = "lo"
+def ftp_sniffer(iface):
+    conf.iface = iface
     try:
         # sniffing FTP (port 21) - the ftp function will process the packets
         sniff(filter='tcp port 21', prn=ftp)
@@ -59,8 +59,8 @@ def ssh(packet):
     new_rows_count += 1
     # return ssh_dest_IP, ssh_src_IP, ssh_packet_len, raw
 
-def ssh_sniffer():
-    conf.iface = "en0"
+def ssh_sniffer(iface):
+    conf.iface = iface
     try:
         # sniffing SSH (port 22) - the ssh function will process the packets
         sniff(filter='tcp port 22', prn=ssh)
@@ -87,21 +87,45 @@ def tcp(packet):
             global new_rows_count
             new_rows_count += 1
 
-def tcp_sniffer():
-    conf.iface = "lo"
+def tcp_sniffer(iface):
+    conf.iface = iface
     try:
         sniff(filter='tcp', prn=tcp)
     except KeyboardInterrupt as e:
         print("[-] Closing function")
         exit(0)
-
+        
+        
+def http(packet):
+    if packet.haslayer(HTTPRequest):
+        url = packet[HTTPRequest].Host.decode() + packet[HTTPRequest].Path.decode()
+        src_ip = packet[IP].src
+        dst_ip = packet[IP].dst
+        packet_len = packet[IP].len
+        method = packet[HTTPRequest].Method.decode()
+        raw = f"{method}{RESET} + {url}"
+        if packet.haslayer(Raw) and method == "POST":
+            raw = f"{method}{RESET} + {url} + {packet[Raw].load}{RESET}
+        raw = raw + "TCP"
+        packetRow.append([src_IP, dest_IP, packet_len, raw])
+        global new_rows_count
+        new_rows_count += 1
+        
+def http_sniffer(iface):
+    conf.iface = iface
+    try:
+        sniff(filter='port 80', prn=http)
+    except KeyboardInterrupt as e:
+        print("[-] Closing function")
+        exit(0)
 
 
 def packetSniff():
     try:
-        ftp_sniffer()
-        ssh_sniffer()
-        tcp_sniffer()
+        ftp_sniffer(eth0)
+        ssh_sniffer(eth0)
+        tcp_sniffer(eth0)
+        http_sniffer(eth0)
         df = df.append(pd.DataFrame(packetRow,
                    columns=[ 'src_IP', 'dest_IP', 'packet_len', 'data']),
                    ignore_index = True)
