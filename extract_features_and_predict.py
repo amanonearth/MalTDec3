@@ -20,42 +20,42 @@ def read():
 		protocol_type = service = ''
 		failed_login = root_shell = su_attempted = file_creation = 0
 		file_access = outbound_conn = log_accessed = 0
-		if '' in row[3]:
+		if 'TCP' in row[3]:
 			protocol_type = 'TCP'
-		elif '' in row[3]:
+		elif 'SSH' in row[3]:
 			protocol_type = 'SSH'
-		elif '' in row[3]:
+		elif 'FTP' in row[3]:
 			protocol_type = 'FTP'
-		if '' in row[3]:
+		if 'FTP' in row[3]:
 			service = 'VSFTPD'
-		elif '' in row[3]:
+		elif 'SSH' in row[3]:
 			service = 'SSHv2'
-		elif '' in row[3]:
-			service = 'FTP'
+		elif 'TCP' in row[3]:
+			service = 'TCP'
 
 		if protocol_type == 'TCP':
 			if 'Login incorrect' in row[3]:
 				failed_login = 1
-			if 'USER root' in row[3]:
+			if 'root' in row[3]:
 				root_shell = 1
-			if 'USER root' in row[3]:
+			if 'su' in row[3]:
 				su_attempted = 1
-			if 'MKD' in row[3]:
+			if 'mkdir' in row[3]:
 				file_creation = 1
-			if 'LIST' in row[3] or 'CWD' in row[3]:
+			if 'cat' in row[3] or 'strings' in row[3]:
 				file_access = 1
 			if '/var/log' in row[3]:
 				log_accessed = 1
 		elif protocol_type == 'SSH':
-			if 'Login incorrect' in row[3]:
+			if 'Login Failed' in row[3]:
 				failed_login = 1
-			if 'USER root' in row[3]:
+			if 'root' in row[3]:
 				root_shell = 1
-			if 'USER root' in row[3]:
+			if 'su' in row[3]:
 				su_attempted = 1
-			if 'MKD' in row[3]:
+			if 'mkdir' in row[3]:
 				file_creation = 1
-			if 'LIST' in row[3] or 'CWD' in row[3]:
+			if 'cat' in row[3] or 'strings' in row[3]:
 				file_access = 1
 			if '/var/log' in row[3]:
 				log_accessed = 1
