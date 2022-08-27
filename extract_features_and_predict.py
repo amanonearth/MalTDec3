@@ -11,7 +11,6 @@ final_df = []
 next_row_index = 0
 
 def read():
-	# This function is not complete yet...
 	global next_row_index
 	dataframe = []
 	row = ' '
@@ -32,7 +31,7 @@ def read():
 			service = 'SSHv2'
 		elif 'TCP' in row[3]:
 			service = 'TCP'
-
+			
 		if protocol_type == 'TCP':
 			if 'Login incorrect' in row[3]:
 				failed_login = 1
@@ -88,11 +87,16 @@ def merge(df1, df2):
 def read_and_merge(data):
 	global final_df
 	if type(data) != pd.DataFrame:
-		return read()
-	final_df = merge(data, read())
+		final_df = read()
+	else:
+		final_df = merge(data, read())
 
 def get_mal_IPs():
 	global final_df
+
+	read_and_merge(final_df)
+	print(final_df)
+	print(ex.packetRow)
 	
 	model_df = pd.get_dummies(final_df.drop(columns = ['src_IP', 'dest_IP']))
 	
@@ -106,8 +110,9 @@ def get_mal_IPs():
 	Mal_df = pd.concat([Mal_src_IP, Mal_dest_IP], names = ['src_IP', 'dest_IP'], 
                         axis = 1)
 	
-	return Mal_df
-
+	print(Mal_df)
 
 # Calling read_and_merge() will read and extract features and merge them to 'final_df'
+
 # Calling get_mal_IPs will return a dataframe containing src and dest IP of Malicious data points in 'final_df'
+

@@ -1,5 +1,6 @@
 from scapy.all import *
 import pandas as pd
+import multiprocessing
 
 packetRow = []
 new_rows_count = 0
@@ -30,9 +31,10 @@ def ftp(packet):
     packetRow.append([ftp_src_IP, ftp_dest_IP, ftp_packet_len, raw])
     global new_rows_count
     new_rows_count += 1
+    print(packetRow)
 
 
-def ftp_sniffer(iface):
+def ftp_sniffer(iface = 'enp0s3'):
     conf.iface = iface
     try:
         # sniffing FTP (port 21) - the ftp function will process the packets
@@ -59,7 +61,7 @@ def ssh(packet):
     new_rows_count += 1
     # return ssh_dest_IP, ssh_src_IP, ssh_packet_len, raw
 
-def ssh_sniffer(iface):
+def ssh_sniffer(iface = 'enp0s3'):
     conf.iface = iface
     try:
         # sniffing SSH (port 22) - the ssh function will process the packets
@@ -87,7 +89,7 @@ def tcp(packet):
             global new_rows_count
             new_rows_count += 1
 
-def tcp_sniffer(iface):
+def tcp_sniffer(iface = 'enp0s3'):
     conf.iface = iface
     try:
         sniff(filter='tcp', prn=tcp)
@@ -105,13 +107,13 @@ def http(packet):
         method = packet[HTTPRequest].Method.decode()
         raw = f"{method}{RESET} + {url}"
         if packet.haslayer(Raw) and method == "POST":
-            raw = f"{method}{RESET} + {url} + {packet[Raw].load}{RESET}
+            raw = f"{method}{RESET} + {url} + {packet[Raw].load}{RESET}"
         raw = raw + "TCP"
         packetRow.append([src_IP, dest_IP, packet_len, raw])
         global new_rows_count
         new_rows_count += 1
         
-def http_sniffer(iface):
+def http_sniffer(iface = 'enp0s3'):
     conf.iface = iface
     try:
         sniff(filter='port 80', prn=http)
@@ -119,20 +121,29 @@ def http_sniffer(iface):
         print("[-] Closing function")
         exit(0)
 
-
 def packetSniff():
     try:
-        ftp_sniffer(eth0)
-        ssh_sniffer(eth0)
-        tcp_sniffer(eth0)
-        http_sniffer(eth0)
-        df = df.append(pd.DataFrame(packetRow,
-                   columns=[ 'src_IP', 'dest_IP', 'packet_len', 'data']),
-                   ignore_index = True)
+        t1 = multiprocessing.Process(target = ftp_sniffer)
+        t2 = multiprocessing.Process(target = ssh_sniffer)
+        t3 = multiprocessing.Process(target = tcp_sniffer)
+        t1.start()
+        t2.start()
+        t3.start()
+        # ftp_sniffer('enp0s3')
+        # ssh_sniffer('enp0s3')
+        # tcp_sniffer('enp0s3')
+        # print(packetRow)
+        # http_sniffer('enp0s3')
+        # df = df.append(pd.DataFrame(packetRow,
+        #            columns=[ 'src_IP', 'dest_IP', 'packet_len', 'data']),
+        #            ignore_index = True)
         # display(df)
     except KeyboardInterrupt as e:
-        df = df.append(pd.DataFrame(packetRow,
-                   columns=[ 'src_IP', 'dest_IP', 'packet_len', 'data']),
-                   ignore_index = True)
-        
+        # print(packetRow)
+        exit(0)
+        # df = df.append(pd.DataFrame(packetRow,
+        #            columns=[ 'src_IP', 'dest_IP', 'packet_len', 'data']),
+        #            ignore_index = True)
+       
 packetSniff()
+# ftp_sniffer('lo')
