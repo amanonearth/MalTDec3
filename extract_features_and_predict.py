@@ -1,11 +1,12 @@
 import pandas as pd
 import external as ex
 import pickle as pk
-from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model, Sequential
 
 FEATURES = ['protocol_type', 'service', 'src_IP', 'dest_IP', 'failed_login', 'root_shell', 'su_attempted', 'file_creation',
 			'file_access', 'outbound_conn', 'log_accessed', 'packet_len']
 
+MODEL_IS_BUILT = False
 data_dir = ''
 final_df = []
 next_row_index = 0
@@ -100,7 +101,9 @@ def get_mal_IPs():
 	
 	model_df = pd.get_dummies(final_df.drop(columns = ['src_IP', 'dest_IP']))
 	
-	encoder = load_model('trained_encoder.h5')
+	auto_loaded = load_model('trained_autoencoder.h5')
+	encoder = Sequential()
+	encoder.add(auto_loaded.layers[0])
 	reduced_df = encoder.predict(model_df)
 	 
 	model = pk.load(open("OneClassSVM_auto.pickle", 'rb'))
